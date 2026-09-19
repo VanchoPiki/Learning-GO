@@ -1,0 +1,115 @@
+---
+
+# Урок: Методы структур в Go
+
+**Метод** — это обычная функция, у которой перед именем указан **получатель (Receiver)**.
+
+Получатель говорит компилятору: *"Эта функция принадлежит ВОТ ЭТОЙ структуре и вызывается через точку"*.
+
+---
+
+## 1. Сравнение: Функция vs Метод
+
+Посмотри, как одна и та же логика выглядит в процедурном и объектном стиле:
+
+```go
+type Wallet struct {
+    Balance float64
+}
+
+// 1. Обычная функция:
+func PrintBalance(w Wallet) {
+    fmt.Println(w.Balance)
+}
+// Вызов: PrintBalance(myWallet)
+
+
+// 2. МЕТОД (в скобках перед именем указан Receiver — w Wallet):
+func (w Wallet) PrintBalance() {
+    fmt.Println(w.Balance)
+}
+// Вызов: myWallet.PrintBalance()
+```
+*Заметь:* в Go не принято называть получателя `this` или `self`. Принято называть одной-двумя первыми буквами имени структуры: для `Wallet` — `w`, для `User` — `u`.
+
+---
+
+## 2. Самый важный выбор: `Value` или `Pointer` ресивер?
+
+У методов есть два вида получателей:
+
+### А. Значение (Value receiver): `func (w Wallet) ...`
+* Go делает **копию** структуры.
+* Метод **НЕ может** изменить оригинальные данные.
+* Используется для **чтения** данных или вычислений (Getters, печать информации).
+
+### Б. Указатель (Pointer receiver): `func (w *Wallet) ...`
+* Go передает **адрес** оригинала.
+* Метод **МОЖЕТ** изменять поля структуры.
+* Не тратит память на копирование.
+* Используется для **изменения** данных (Setters, пополнение, списание).
+
+---
+
+## 3. Живой пример: Кошелек в деле
+
+```go
+package main
+
+import "fmt"
+
+type Wallet struct {
+    Address string
+    Balance float64
+}
+
+// 1. Read-Only метод (Value receiver): просто выводит инфу
+func (w Wallet) PrintInfo() {
+    fmt.Printf("Кошелек %s | Баланс: %.2f\n", w.Address, w.Balance)
+}
+
+// 2. Метод с изменением данных (Pointer receiver): пополняет баланс
+func (w *Wallet) Deposit(amount float64) {
+    if amount <= 0 {
+        fmt.Println("Сумма должна быть больше 0")
+        return
+    }
+    w.Balance += amount
+    fmt.Printf("Успешно пополнено на %.2f\n", amount)
+}
+
+// 3. Метод со списанием: возвращает bool (хватило денег или нет)
+func (w *Wallet) Withdraw(amount float64) bool {
+    if amount > w.Balance {
+        fmt.Println("Недостаточно средств!")
+        return false
+    }
+    w.Balance -= amount
+    return true
+}
+
+func main() {
+    // Создаем кошелек
+    myWallet := Wallet{Address: "0x777...AAA", Balance: 100.0}
+
+    // Вызываем методы через точку!
+    myWallet.PrintInfo() // Кошелек 0x777...AAA | Баланс: 100.00
+
+    myWallet.Deposit(50.0)
+    myWallet.PrintInfo() // Баланс стал 150.00!
+
+    // Пробуем списать деньги
+    success := myWallet.Withdraw(70.0)
+    if success {
+        fmt.Println("Списание прошло успешно!")
+    }
+
+    myWallet.PrintInfo() // Баланс стал 80.00!
+}
+```
+
+> **Магия Go:** Обрати внимание на строку `myWallet.Deposit(50.0)`.
+> Мы создали `myWallet` как обычное значение, а метод `Deposit` требует указатель `*Wallet`.
+> Тебе **не нужно** писать `(&myWallet).Deposit()`. Go **сам автоматически берет адрес `&`**, когда вызывает метод с pointer-ресивером!
+
+---
