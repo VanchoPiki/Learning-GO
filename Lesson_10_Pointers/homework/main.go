@@ -33,4 +33,7 @@ func main() {
 	fmt.Println(a, b)
 	swap(&a, &b)
 	fmt.Println(a, b)
+
+	fmt.Println(&n)
+	fmt.Println()
 }
